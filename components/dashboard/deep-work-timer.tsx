@@ -34,12 +34,30 @@ export function DeepWorkTimer() {
     }
   }
 
-  const handleStart = () => {
+  const handleStart = async () => {
     setIsRunning(true)
+    // 🚀 Friday OS Backend API Call (Start Session)
+    try {
+      await fetch("http://127.0.0.1:8008/focus/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_tag: "Jarvish_Core_Build" })
+      })
+      console.log("🔥 Friday OS: Focus Mode ON! Backend connection successful.")
+    } catch (error) {
+      console.error("Connection Failed. Backend chalu hai kya?", error)
+    }
   }
 
-  const handlePause = () => {
+  const handlePause = async () => {
     setIsRunning(false)
+    // 🛑 Friday OS Backend API Call (Stop Session)
+    try {
+      await fetch("http://127.0.0.1:8008/focus/stop", { method: "POST" })
+      console.log("🛑 Friday OS: Focus Mode PAUSED & Data Saved!")
+    } catch (error) {
+      console.error("Connection Failed.", error)
+    }
   }
 
   const handleReset = () => {

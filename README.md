@@ -12,3 +12,7 @@
   ## 🚀 Key Features: The Kill-Switch
 * **System-Level Blocking:** The Python backend requires Administrator privileges to modify the Windows `C:\Windows\System32\drivers\etc\hosts` file.
 * **Network Override:** Successfully bypasses Secure DNS (DNS-over-HTTPS) and internal browser socket caching to achieve absolute network blocking.
+
+## 🛠️ Upcoming Phases
+* **Phase 3:** Automatic synchronization between the UI Deep Work Timer and the Python blocking endpoint.
+* **Phase 4:** Supabase backend integration for real-time mission and productivity tracking.

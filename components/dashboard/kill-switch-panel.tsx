@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
 
 interface App {
   id: string
@@ -21,6 +20,7 @@ const DEFAULT_APPS: App[] = [
 export function KillSwitchPanel() {
   const [apps, setApps] = useState<App[]>(DEFAULT_APPS)
   const [focusModeOn, setFocusModeOn] = useState(false)
+  const [serverMessage, setServerMessage] = useState<string | null>(null)
 
   const toggleAppBlock = (id: string) => {
     setApps((prevApps) =>
@@ -30,16 +30,41 @@ export function KillSwitchPanel() {
     )
   }
 
-  const toggleFocusMode = () => {
-    setFocusModeOn(!focusModeOn)
-    if (!focusModeOn) {
-      // When enabling focus mode, block all distracting apps
-      setApps((prevApps) =>
-        prevApps.map((app) => ({
-          ...app,
-          blocked: ['slack', 'twitter', 'youtube', 'reddit'].includes(app.id),
-        }))
-      )
+  // 🔥 THE ADVANCED HANDSHAKE FUNCTION (BLOCK & UNBLOCK)
+  const toggleFocusMode = async () => {
+    const newState = !focusModeOn
+    setFocusModeOn(newState)
+
+    if (newState) {
+      // 1. Block apps locally in UI
+      setApps((prevApps) => prevApps.map((app) => ({
+        ...app, blocked: ['slack', 'twitter', 'youtube', 'reddit'].includes(app.id),
+      })))
+
+      // 2. Send BLOCK Command to Python
+      try {
+        const response = await fetch('http://127.0.0.1:5000/block')
+        const data = await response.json()
+        setServerMessage(data.status === "Error" ? `🔴 ${data.message}` : `🟢 ${data.message}`)
+        setTimeout(() => setServerMessage(null), 4000)
+      } catch (error) {
+        setServerMessage("🔴 ERROR: System Controller is Offline!")
+        setTimeout(() => setServerMessage(null), 4000)
+      }
+    } else {
+      // 1. Unblock apps locally in UI
+      setApps((prevApps) => prevApps.map((app) => ({ ...app, blocked: false })))
+
+      // 2. Send UNBLOCK Command to Python
+      try {
+        const response = await fetch('http://127.0.0.1:5000/unblock')
+        const data = await response.json()
+        setServerMessage(data.status === "Error" ? `🔴 ${data.message}` : `🟢 ${data.message}`)
+        setTimeout(() => setServerMessage(null), 4000)
+      } catch (error) {
+        setServerMessage("🔴 ERROR: System Controller is Offline!")
+        setTimeout(() => setServerMessage(null), 4000)
+      }
     }
   }
 
@@ -70,6 +95,13 @@ export function KillSwitchPanel() {
           </button>
         </div>
       </div>
+
+      {/* Python Server Feedback Message */}
+      {serverMessage && (
+        <div className="mb-4 text-xs font-semibold px-3 py-2 rounded-lg bg-background border border-border animate-in fade-in slide-in-from-top-2">
+          {serverMessage}
+        </div>
+      )}
 
       {/* Apps list */}
       <div className="space-y-3">

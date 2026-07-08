@@ -36,31 +36,66 @@ export function DeepWorkTimer() {
 
   const handleStart = async () => {
     setIsRunning(true)
-    // 🚀 Friday OS Backend API Call (Start Session)
+
+    // 🔥 Backend 1: FastAPI (8008) — session tracking, stats & streak
     try {
       await fetch("http://127.0.0.1:8008/focus/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_tag: "Jarvish_Core_Build" })
       })
-      console.log("🔥 Friday OS: Focus Mode ON! Backend connection successful.")
+      console.log("🔥 Friday OS: Focus Mode ON! Stats tracking started.")
     } catch (error) {
-      console.error("Connection Failed. Backend chalu hai kya?", error)
+      console.error("Stats backend (8008) failed. Chalu hai kya?", error)
+    }
+
+    // 🔒 Backend 2: Flask (5000) — asli hosts-file kill switch
+    try {
+      await fetch("http://127.0.0.1:5000/block", { method: "GET" })
+      console.log("🔒 Kill Switch: Distracting sites blocked at OS level.")
+    } catch (error) {
+      console.error("Kill Switch backend (5000) failed. Admin mode mein chalu hai kya?", error)
     }
   }
 
   const handlePause = async () => {
     setIsRunning(false)
-    // 🛑 Friday OS Backend API Call (Stop Session)
+
+    // 🛑 Backend 1: FastAPI (8008) — session end + stats save
     try {
       await fetch("http://127.0.0.1:8008/focus/stop", { method: "POST" })
       console.log("🛑 Friday OS: Focus Mode PAUSED & Data Saved!")
     } catch (error) {
-      console.error("Connection Failed.", error)
+      console.error("Stats backend (8008) failed.", error)
+    }
+
+    // 🔓 Backend 2: Flask (5000) — websites unblock
+    try {
+      await fetch("http://127.0.0.1:5000/unblock", { method: "GET" })
+      console.log("🔓 Kill Switch: Websites unblocked.")
+    } catch (error) {
+      console.error("Kill Switch backend (5000) failed.", error)
     }
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    // Agar timer chal raha tha jab Reset dabaya, to pehle backend session
+    // properly close karo — warna site block hi reh jayegi aur stats bhi
+    // galat save honge (orphaned session).
+    if (isRunning) {
+      try {
+        await fetch("http://127.0.0.1:8008/focus/stop", { method: "POST" })
+      } catch (error) {
+        console.error("Stats backend (8008) failed during reset.", error)
+      }
+      try {
+        await fetch("http://127.0.0.1:5000/unblock", { method: "GET" })
+      } catch (error) {
+        console.error("Kill Switch backend (5000) failed during reset.", error)
+      }
+      console.log("🔄 Reset: Active session safely closed, websites unblocked.")
+    }
+
     setIsRunning(false)
     setTimeLeft(selectedDuration * 60)
   }

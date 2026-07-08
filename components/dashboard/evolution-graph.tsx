@@ -1,20 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const WEEKS_PER_MONTH = 4
-
-// Generate 52 weeks of mock data
-const generateData = () => {
-  const data = []
-  for (let i = 0; i < 52; i++) {
-    data.push(Math.floor(Math.random() * 8))
-  }
-  return data
-}
-
-const data = generateData()
 
 function getColor(value: number): string {
   if (value === 0) return '#F5F5F5'
@@ -26,12 +15,26 @@ function getColor(value: number): string {
 
 export function EvolutionGraph() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const [data, setData] = useState<number[]>([])
+
+  // The Fix: Generate data only after the component mounts on the client
+  useEffect(() => {
+    const generateData = () => {
+      const newData = []
+      for (let i = 0; i < 52; i++) {
+        newData.push(Math.floor(Math.random() * 8))
+      }
+      return newData
+    }
+    setData(generateData())
+  }, [])
 
   const handleHover = (index: number) => {
     setHoveredIndex(index)
   }
 
   const weeks = Array.from({ length: 52 }, (_, i) => i)
+  
   const getDateForWeek = (weekIndex: number) => {
     const startOfYear = new Date(new Date().getFullYear(), 0, 1)
     const date = new Date(startOfYear.getTime() + weekIndex * 7 * 24 * 60 * 60 * 1000)
@@ -55,7 +58,7 @@ export function EvolutionGraph() {
 
       {/* Month labels */}
       <div className="mb-4 flex gap-2">
-        {MONTHS.map((month, idx) => (
+        {MONTHS.map((month) => (
           <div
             key={month}
             className="flex-1 text-xs font-medium text-muted-foreground text-center"
@@ -67,28 +70,33 @@ export function EvolutionGraph() {
 
       {/* Grid */}
       <div className="inline-grid gap-1 mb-6" style={{ gridTemplateColumns: 'repeat(13, 1fr)' }}>
-        {weeks.map((week) => (
-          <div
-            key={week}
-            className="group relative cursor-pointer"
-            onMouseEnter={() => handleHover(week)}
-            onMouseLeave={() => setHoveredIndex(null)}
-          >
+        {data.length > 0 ? (
+          weeks.map((week) => (
             <div
-              className="h-5 w-5 rounded transition-all duration-150 hover:shadow-lg hover:scale-110 dark:hover:shadow-xl"
-              style={{
-                backgroundColor: getColor(data[week]),
-                opacity: hoveredIndex === null || hoveredIndex === week ? 1 : 0.4,
-              }}
-            />
-            {hoveredIndex === week && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-lg bg-foreground dark:bg-card px-3 py-2 text-xs font-medium text-card dark:text-foreground z-10 pointer-events-none shadow-lg border border-border dark:border-border">
-                <div className="font-semibold">{getDateForWeek(week)}</div>
-                <div className="text-card dark:text-muted-foreground text-xs mt-1">{data[week]}.5h Focus • {getTaksForWeek(week)} Tasks</div>
-              </div>
-            )}
-          </div>
-        ))}
+              key={week}
+              className="group relative cursor-pointer"
+              onMouseEnter={() => handleHover(week)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              <div
+                className="h-5 w-5 rounded transition-all duration-150 hover:shadow-lg hover:scale-110 dark:hover:shadow-xl"
+                style={{
+                  backgroundColor: getColor(data[week]),
+                  opacity: hoveredIndex === null || hoveredIndex === week ? 1 : 0.4,
+                }}
+              />
+              {hoveredIndex === week && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-lg bg-foreground dark:bg-card px-3 py-2 text-xs font-medium text-card dark:text-foreground z-10 pointer-events-none shadow-lg border border-border dark:border-border">
+                  <div className="font-semibold">{getDateForWeek(week)}</div>
+                  <div className="text-card dark:text-muted-foreground text-xs mt-1">{data[week]}.5h Focus • {getTaksForWeek(week)} Tasks</div>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+           // Placeholder logic to avoid empty spacing while generating
+            <div className="col-span-13 text-center text-sm text-muted-foreground py-4">Loading tracker...</div>
+        )}
       </div>
 
       {/* Enhanced Legend with Description */}

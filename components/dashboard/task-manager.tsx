@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Check, Plus, Trash2, ChevronDown, Loader2, AlertCircle, Pencil, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useFocusMode } from '@/context/focus-mode-context'
 
 interface Task {
   id: number
@@ -22,6 +23,7 @@ const PROJECTS = [
 type FilterType = 'all' | 'active' | 'completed'
 
 export function TaskManager() {
+  const { incrementTasksCompleted } = useFocusMode()
   const [tasks, setTasks] = useState<Task[]>([])
   const [inputValue, setInputValue] = useState('')
   const [selectedProject, setSelectedProject] = useState('work')
@@ -114,6 +116,12 @@ export function TaskManager() {
     setTasks((prev) =>
       prev.map((task) => (task.id === id ? { ...task, is_completed: !currentStatus } : task))
     )
+
+    // Agar task ko ABHI complete kiya ja raha hai (pehle incomplete tha),
+    // to Focus Mode session counter mein +1 kar do.
+    if (!currentStatus) {
+      incrementTasksCompleted()
+    }
 
     const { error } = await supabase
       .from('tasks')

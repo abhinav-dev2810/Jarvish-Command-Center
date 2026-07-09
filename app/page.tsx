@@ -7,9 +7,11 @@ import { DeepWorkTimer } from '@/components/dashboard/deep-work-timer'
 import { KillSwitchPanel } from '@/components/dashboard/kill-switch-panel'
 import { TaskManager } from '@/components/dashboard/task-manager'
 import { FridayFeed } from '@/components/dashboard/friday-feed'
+import { FocusModeProvider } from '@/context/focus-mode-context'
 
 export default function Page() {
   return (
+  <FocusModeProvider> 
     <main className="min-h-screen bg-background">
       <Header />
       
@@ -31,5 +33,6 @@ export default function Page() {
         <FridayFeed />
       </div>
     </main>
+    </FocusModeProvider>
   )
 }

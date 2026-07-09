@@ -3,7 +3,18 @@
 import { useState, useEffect } from 'react'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const WEEKS_PER_MONTH = 4
+
+interface GraphPoint {
+  date: string
+  total_focus_hours: number
+  tasks_completed: number
+}
+
+interface WeekSummary {
+  weekStartDate: string
+  totalHours: number
+  totalTasks: number
+}
 
 function getColor(value: number): string {
   if (value === 0) return '#F5F5F5'
@@ -15,34 +26,44 @@ function getColor(value: number): string {
 
 export function EvolutionGraph() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const [data, setData] = useState<number[]>([])
+  const [weeks, setWeeks] = useState<WeekSummary[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // The Fix: Generate data only after the component mounts on the client
   useEffect(() => {
-    const generateData = () => {
-      const newData = []
-      for (let i = 0; i < 52; i++) {
-        newData.push(Math.floor(Math.random() * 8))
-      }
-      return newData
-    }
-    setData(generateData())
+    fetchGraphData()
   }, [])
+
+  const fetchGraphData = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8008/stats/graph')
+      if (!response.ok) throw new Error('Failed to fetch graph data')
+      const data: GraphPoint[] = await response.json()
+
+      const grouped: WeekSummary[] = []
+      for (let i = 0; i < data.length; i += 7) {
+        const chunk = data.slice(i, i + 7)
+        if (chunk.length === 0) continue
+        grouped.push({
+          weekStartDate: chunk[0].date,
+          totalHours: chunk.reduce((sum, d) => sum + d.total_focus_hours, 0),
+          totalTasks: chunk.reduce((sum, d) => sum + d.tasks_completed, 0),
+        })
+      }
+      setWeeks(grouped)
+    } catch (error) {
+      console.error('Graph backend (8008) failed:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleHover = (index: number) => {
     setHoveredIndex(index)
   }
 
-  const weeks = Array.from({ length: 52 }, (_, i) => i)
-  
-  const getDateForWeek = (weekIndex: number) => {
-    const startOfYear = new Date(new Date().getFullYear(), 0, 1)
-    const date = new Date(startOfYear.getTime() + weekIndex * 7 * 24 * 60 * 60 * 1000)
+  const formatWeekLabel = (dateStr: string) => {
+    const date = new Date(dateStr)
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-
-  const getTaksForWeek = (weekIndex: number) => {
-    return Math.floor(Math.random() * 8)
   }
 
   return (
@@ -70,32 +91,35 @@ export function EvolutionGraph() {
 
       {/* Grid */}
       <div className="inline-grid gap-1 mb-6" style={{ gridTemplateColumns: 'repeat(13, 1fr)' }}>
-        {data.length > 0 ? (
-          weeks.map((week) => (
+        {isLoading ? (
+          <div className="col-span-13 text-center text-sm text-muted-foreground py-4">
+            Loading tracker...
+          </div>
+        ) : (
+          weeks.map((week, index) => (
             <div
-              key={week}
+              key={index}
               className="group relative cursor-pointer"
-              onMouseEnter={() => handleHover(week)}
+              onMouseEnter={() => handleHover(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               <div
                 className="h-5 w-5 rounded transition-all duration-150 hover:shadow-lg hover:scale-110 dark:hover:shadow-xl"
                 style={{
-                  backgroundColor: getColor(data[week]),
-                  opacity: hoveredIndex === null || hoveredIndex === week ? 1 : 0.4,
+                  backgroundColor: getColor(week.totalHours),
+                  opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.4,
                 }}
               />
-              {hoveredIndex === week && (
+              {hoveredIndex === index && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap rounded-lg bg-foreground dark:bg-card px-3 py-2 text-xs font-medium text-card dark:text-foreground z-10 pointer-events-none shadow-lg border border-border dark:border-border">
-                  <div className="font-semibold">{getDateForWeek(week)}</div>
-                  <div className="text-card dark:text-muted-foreground text-xs mt-1">{data[week]}.5h Focus • {getTaksForWeek(week)} Tasks</div>
+                  <div className="font-semibold">{formatWeekLabel(week.weekStartDate)}</div>
+                  <div className="text-card dark:text-muted-foreground text-xs mt-1">
+                    {week.totalHours.toFixed(1)}h Focus • {week.totalTasks} Tasks
+                  </div>
                 </div>
               )}
             </div>
           ))
-        ) : (
-           // Placeholder logic to avoid empty spacing while generating
-            <div className="col-span-13 text-center text-sm text-muted-foreground py-4">Loading tracker...</div>
         )}
       </div>
 
@@ -113,7 +137,7 @@ export function EvolutionGraph() {
               <div
                 key={val}
                 className="h-4 w-4 rounded transition-all hover:scale-125 cursor-help"
-                title={`${val}-${val+2}h daily focus`}
+                title={`${val}-${val + 2}h daily focus`}
                 style={{ backgroundColor: getColor(val) }}
               />
             ))}

@@ -11,6 +11,7 @@ interface FocusModeContextType {
   startFocus: (projectTag?: string) => Promise<void>
   stopFocus: () => Promise<void>
   resetFocus: () => Promise<void>
+  incrementTasksCompleted: () => void
 }
 
 const FocusModeContext = createContext<FocusModeContextType | undefined>(undefined)
@@ -20,6 +21,7 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
   const [selectedDuration, setSelectedDurationState] = useState(25)
   const [timeLeft, setTimeLeft] = useState(25 * 60)
   const [serverMessage, setServerMessage] = useState<string | null>(null)
+  const [tasksCompletedThisSession, setTasksCompletedThisSession] = useState(0)
 
   // Countdown logic — jab bhi isRunning true ho, timer chalta rahega
   useEffect(() => {
@@ -44,6 +46,10 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
       setSelectedDurationState(minutes)
       setTimeLeft(minutes * 60)
     }
+  }
+
+  const incrementTasksCompleted = () => {
+    setTasksCompletedThisSession((prev) => prev + 1)
   }
 
   const startFocus = async (projectTag: string = 'Jarvish_Core_Build') => {
@@ -74,9 +80,14 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
     setIsRunning(false)
 
     try {
-      await fetch('http://127.0.0.1:8008/focus/stop', { method: 'POST' })
+      await fetch('http://127.0.0.1:8008/focus/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks_completed: tasksCompletedThisSession }),
+      })
+      setTasksCompletedThisSession(0) // reset counter for next session
     } catch (error) {
-      console.error('Stats backend (8008) failed.', error)
+      console.error('Stats backend (8008) failed during stop.', error)
     }
 
     try {
@@ -91,7 +102,12 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
   const resetFocus = async () => {
     if (isRunning) {
       try {
-        await fetch('http://127.0.0.1:8008/focus/stop', { method: 'POST' })
+        await fetch('http://127.0.0.1:8008/focus/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tasks_completed: tasksCompletedThisSession }),
+        })
+        setTasksCompletedThisSession(0)
       } catch (error) {
         console.error('Stats backend (8008) failed during reset.', error)
       }
@@ -116,6 +132,7 @@ export function FocusModeProvider({ children }: { children: ReactNode }) {
         startFocus,
         stopFocus,
         resetFocus,
+        incrementTasksCompleted,
       }}
     >
       {children}
